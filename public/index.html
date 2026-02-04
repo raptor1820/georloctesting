@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Live Location Tracker</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
+
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            h1 {
+                color: white;
+                text-align: center;
+                margin-bottom: 20px;
+                font-size: 1.8rem;
+            }
+
+            .card {
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                margin-bottom: 16px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            }
+
+            .card h2 {
+                color: #333;
+                font-size: 1.1rem;
+                margin-bottom: 16px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .status {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 16px;
+                border-radius: 8px;
+                margin-bottom: 16px;
+            }
+
+            .status.waiting {
+                background: #fff3cd;
+                color: #856404;
+            }
+
+            .status.active {
+                background: #d4edda;
+                color: #155724;
+            }
+
+            .status.error {
+                background: #f8d7da;
+                color: #721c24;
+            }
+
+            .pulse {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                animation: pulse 1.5s infinite;
+            }
+
+            .pulse.waiting {
+                background: #ffc107;
+            }
+            .pulse.active {
+                background: #28a745;
+            }
+            .pulse.error {
+                background: #dc3545;
+            }
+
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 0.5;
+                    transform: scale(1.2);
+                }
+            }
+
+            .data-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .data-item {
+                background: #f8f9fa;
+                padding: 12px;
+                border-radius: 8px;
+            }
+
+            .data-item.full-width {
+                grid-column: span 2;
+            }
+
+            .data-label {
+                font-size: 0.75rem;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+            }
+
+            .data-value {
+                font-size: 1.1rem;
+                font-weight: 600;
+                color: #333;
+                word-break: break-all;
+            }
+
+            .data-value.small {
+                font-size: 0.9rem;
+            }
+
+            button {
+                width: 100%;
+                padding: 16px;
+                font-size: 1.1rem;
+                font-weight: 600;
+                border: none;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .btn-start {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+
+            .btn-start:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+
+            .btn-stop {
+                background: #dc3545;
+                color: white;
+            }
+
+            .history {
+                max-height: 200px;
+                overflow-y: auto;
+            }
+
+            .history-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 12px;
+                background: #f8f9fa;
+                border-radius: 6px;
+                margin-bottom: 6px;
+                font-size: 0.85rem;
+            }
+
+            .history-time {
+                color: #666;
+            }
+
+            .history-coords {
+                font-family: monospace;
+                color: #333;
+            }
+
+            .settings {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 16px;
+            }
+
+            .settings label {
+                font-size: 0.9rem;
+                color: #666;
+            }
+
+            .settings select {
+                padding: 8px 12px;
+                border-radius: 8px;
+                border: 1px solid #ddd;
+                font-size: 0.9rem;
+            }
+
+            .map-placeholder {
+                background: #e9ecef;
+                height: 200px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #666;
+                font-size: 0.9rem;
+                text-align: center;
+                padding: 20px;
+            }
+
+            .accuracy-indicator {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+
+            .accuracy-high {
+                background: #d4edda;
+                color: #155724;
+            }
+            .accuracy-medium {
+                background: #fff3cd;
+                color: #856404;
+            }
+            .accuracy-low {
+                background: #f8d7da;
+                color: #721c24;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📍 Live Location Tracker</h1>
+
+            <!-- Status Card -->
+            <div class="card">
+                <div id="status" class="status waiting">
+                    <div class="pulse waiting"></div>
+                    <span>Ready to start tracking</span>
+                </div>
+
+                <div class="settings">
+                    <label>Update interval:</label>
+                    <select id="interval">
+                        <option value="1000">1 second</option>
+                        <option value="2000">2 seconds</option>
+                        <option value="3000" selected>3 seconds</option>
+                        <option value="5000">5 seconds</option>
+                        <option value="10000">10 seconds</option>
+                    </select>
+                </div>
+
+                <button
+                    id="toggleBtn"
+                    class="btn-start"
+                    onclick="toggleTracking()">
+                    Start Tracking
+                </button>
+            </div>
+
+            <!-- Current Location Card -->
+            <div class="card">
+                <h2>📌 Current Location</h2>
+                <div class="data-grid">
+                    <div class="data-item">
+                        <div class="data-label">Latitude</div>
+                        <div class="data-value" id="latitude">--</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Longitude</div>
+                        <div class="data-value" id="longitude">--</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Accuracy</div>
+                        <div class="data-value" id="accuracy">--</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Last Update</div>
+                        <div class="data-value small" id="lastUpdate">--</div>
+                    </div>
+                    <div class="data-item full-width">
+                        <div class="data-label">Speed</div>
+                        <div class="data-value" id="speed">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Card -->
+            <div class="card">
+                <h2>📊 Session Stats</h2>
+                <div class="data-grid">
+                    <div class="data-item">
+                        <div class="data-label">Updates Received</div>
+                        <div class="data-value" id="updateCount">0</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Session Duration</div>
+                        <div class="data-value" id="duration">0:00</div>
+                    </div>
+                    <div class="data-item full-width">
+                        <div class="data-label">Avg Accuracy</div>
+                        <div class="data-value" id="avgAccuracy">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Card -->
+            <div class="card">
+                <h2>📜 Location History</h2>
+                <div class="history" id="history">
+                    <div
+                        class="history-item"
+                        style="justify-content: center; color: #666">
+                        No location updates yet
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map Link Card -->
+            <div class="card">
+                <h2>🗺️ View on Map</h2>
+                <div class="map-placeholder" id="mapLink">
+                    Start tracking to get a map link
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let isTracking = false;
+            let watchId = null;
+            let intervalId = null;
+            let updateCount = 0;
+            let accuracySum = 0;
+            let sessionStart = null;
+            let durationInterval = null;
+            let locationHistory = [];
+
+            function toggleTracking() {
+                if (isTracking) {
+                    stopTracking();
+                } else {
+                    startTracking();
+                }
+            }
+
+            function startTracking() {
+                if (!navigator.geolocation) {
+                    setStatus(
+                        "error",
+                        "Geolocation is not supported by this browser",
+                    );
+                    return;
+                }
+
+                isTracking = true;
+                sessionStart = Date.now();
+                updateCount = 0;
+                accuracySum = 0;
+                locationHistory = [];
+
+                document.getElementById("toggleBtn").textContent =
+                    "Stop Tracking";
+                document.getElementById("toggleBtn").className = "btn-stop";
+                document.getElementById("interval").disabled = true;
+
+                setStatus("active", "Tracking active - Acquiring location...");
+
+                // Start duration timer
+                durationInterval = setInterval(updateDuration, 1000);
+
+                // Use watchPosition for continuous tracking
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0,
+                };
+
+                watchId = navigator.geolocation.watchPosition(
+                    handlePosition,
+                    handleError,
+                    options,
+                );
+
+                // Also poll at the specified interval for more frequent updates
+                const interval = parseInt(
+                    document.getElementById("interval").value,
+                );
+                intervalId = setInterval(() => {
+                    navigator.geolocation.getCurrentPosition(
+                        handlePosition,
+                        handleError,
+                        options,
+                    );
+                }, interval);
+            }
+
+            function stopTracking() {
+                isTracking = false;
+
+                if (watchId !== null) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+
+                if (intervalId !== null) {
+                    clearInterval(intervalId);
+                    intervalId = null;
+                }
+
+                if (durationInterval !== null) {
+                    clearInterval(durationInterval);
+                    durationInterval = null;
+                }
+
+                document.getElementById("toggleBtn").textContent =
+                    "Start Tracking";
+                document.getElementById("toggleBtn").className = "btn-start";
+                document.getElementById("interval").disabled = false;
+
+                setStatus("waiting", "Tracking stopped");
+            }
+
+            function handlePosition(position) {
+                const { latitude, longitude, accuracy, speed, heading } =
+                    position.coords;
+                const timestamp = new Date();
+
+                updateCount++;
+                accuracySum += accuracy;
+
+                // Update current location display
+                document.getElementById("latitude").textContent =
+                    latitude.toFixed(6);
+                document.getElementById("longitude").textContent =
+                    longitude.toFixed(6);
+
+                // Accuracy with color indicator
+                const accuracyClass =
+                    accuracy < 10 ? "high" : accuracy < 50 ? "medium" : "low";
+                document.getElementById("accuracy").innerHTML =
+                    `${accuracy.toFixed(1)}m <span class="accuracy-indicator accuracy-${accuracyClass}">${accuracyClass}</span>`;
+
+                document.getElementById("lastUpdate").textContent =
+                    timestamp.toLocaleTimeString();
+
+                // Speed (convert from m/s to km/h)
+                if (speed !== null && !isNaN(speed)) {
+                    const speedKmh = (speed * 3.6).toFixed(1);
+                    document.getElementById("speed").textContent =
+                        `${speedKmh} km/h`;
+                } else {
+                    document.getElementById("speed").textContent =
+                        "Not available";
+                }
+
+                // Update stats
+                document.getElementById("updateCount").textContent =
+                    updateCount;
+                document.getElementById("avgAccuracy").textContent =
+                    `${(accuracySum / updateCount).toFixed(1)}m`;
+
+                // Update history
+                addToHistory(latitude, longitude, timestamp);
+
+                // Update map link
+                updateMapLink(latitude, longitude);
+
+                setStatus("active", `Tracking active - ${updateCount} updates`);
+
+                // Log to console for debugging
+                console.log(
+                    `[${timestamp.toLocaleTimeString()}] Lat: ${latitude}, Lng: ${longitude}, Accuracy: ${accuracy}m`,
+                );
+            }
+
+            function handleError(error) {
+                let message = "";
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        message =
+                            "Location permission denied. Please allow location access.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message = "Location information unavailable";
+                        break;
+                    case error.TIMEOUT:
+                        message = "Location request timed out";
+                        break;
+                    default:
+                        message = "An unknown error occurred";
+                }
+                setStatus("error", message);
+                console.error("Geolocation error:", error);
+            }
+
+            function setStatus(type, message) {
+                const statusEl = document.getElementById("status");
+                statusEl.className = `status ${type}`;
+                statusEl.innerHTML = `<div class="pulse ${type}"></div><span>${message}</span>`;
+            }
+
+            function updateDuration() {
+                if (sessionStart) {
+                    const elapsed = Math.floor(
+                        (Date.now() - sessionStart) / 1000,
+                    );
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    document.getElementById("duration").textContent =
+                        `${minutes}:${seconds.toString().padStart(2, "0")}`;
+                }
+            }
+
+            function addToHistory(lat, lng, time) {
+                const entry = {
+                    lat: lat.toFixed(6),
+                    lng: lng.toFixed(6),
+                    time: time.toLocaleTimeString(),
+                };
+
+                locationHistory.unshift(entry);
+
+                // Keep only last 50 entries
+                if (locationHistory.length > 50) {
+                    locationHistory.pop();
+                }
+
+                // Update history display
+                const historyEl = document.getElementById("history");
+                historyEl.innerHTML = locationHistory
+                    .map(
+                        (h) => `
+                <div class="history-item">
+                    <span class="history-time">${h.time}</span>
+                    <span class="history-coords">${h.lat}, ${h.lng}</span>
+                </div>
+            `,
+                    )
+                    .join("");
+            }
+
+            function updateMapLink(lat, lng) {
+                const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+                document.getElementById("mapLink").innerHTML = `
+                <a href="${googleMapsUrl}" target="_blank" style="color: #667eea; text-decoration: none;">
+                    Open in Google Maps<br>
+                    <small style="color: #666;">${lat.toFixed(6)}, ${lng.toFixed(6)}</small>
+                </a>
+            `;
+            }
+        </script>
+    </body>
+</html>

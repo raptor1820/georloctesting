@@ -1,0 +1,13 @@
+{
+    "name": "geolocation-tracker",
+    "version": "1.0.0",
+    "description": "Live location tracking using Geolocation API",
+    "main": "server.js",
+    "scripts": {
+        "start": "bun run server.js",
+        "dev": "bun --watch server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2"
+    }
+}
