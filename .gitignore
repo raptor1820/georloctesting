@@ -48,6 +48,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# Next.js
+.next/
+out/
+
 # Temporary files
 tmp/
 temp/
